@@ -1,58 +1,67 @@
-const express = require("express");
-const cors = require("cors");
-const cookieParser = require("cookie-parser");
-const jwt = require("jsonwebtoken");
-
-const users = [
-  {
-    user_id: "test",
-    user_password: "1234",
-    user_name: "테스트 유저",
-    user_info: "테스트 유저입니다",
-  },
-];
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+const path = require('path');
 
 const app = express();
 
-app.use(
-  cors({
-    origin: [
-      "http://127.0.0.1:[본인의 포트번호]",
-      "http://localhost:[본인의 포트번호]",
-    ],
-    methods: ["OPTIONS", "POST", "GET", "DELETE"],
-    credentials: true,
-  })
-);
-
-app.use(cookieParser());
+app.use(cors());
 app.use(express.json());
 
-const secretKey = "ozcodingschool";
+// 정적 파일 제공 (index.html, login.js 등)
+app.use(express.static(__dirname));
 
-// 클라이언트에서 post 요청을 받은 경우
-app.post("/", (req, res) => {
-  const { userId, userPassword } = req.body;
-  const userInfo = users.find(
-    (el) => el.user_id === userId && el.user_password === userPassword
-  );
-  // 유저정보가 없는 경우
-  if (!userInfo) {
-    res.status(401).send("로그인 실패");
-  } else {
-    // 1. 유저정보가 있는 경우 accessToken을 발급하는 로직을 작성하세요.(sign)
-    // 이곳에 코드를 작성하세요.
-    // 2. 응답으로 accessToken을 클라이언트로 전송하세요. (res.send 사용)
-    // 이곳에 코드를 작성하세요.
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+const SECRET_KEY = 'secret-key';
+
+// 예시 유저
+const USER = {
+  id: 'admin',
+  password: '1234',
+  name: 'Lucky',
+  age: 20,
+};
+
+// 로그인
+app.post('/login', (req, res) => {
+  const { id, password } = req.body;
+
+  if (id === USER.id && password === USER.password) {
+    const accessToken = jwt.sign(
+      {
+        id: USER.id,
+        name: USER.name,
+        age: USER.age,
+      },
+      SECRET_KEY,
+      { expiresIn: '5m' }
+    );
+
+    return res.send({ accessToken });
+  }
+
+  res.status(401).send({ message: '로그인 실패' });
+});
+
+// 토큰 검증
+app.get('/verify', (req, res) => {
+  const token = req.headers.accesstoken;
+
+  if (!token) {
+    return res.status(401).send({ message: '토큰 없음' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, SECRET_KEY);
+    res.send(decoded);
+  } catch (err) {
+    res.status(403).send({ message: '토큰 검증 실패' });
   }
 });
 
-// 클라이언트에서 get 요청을 받은 경우
-app.get("/", (req, res) => {
-  // 3. req headers에 담겨있는 accessToken을 검증하는 로직을 작성하세요.(verify)
-  // 이곳에 코드를 작성하세요.
-  // 4. 검증이 완료되면 유저정보를 클라이언트로 전송하세요.(res.send 사용)
-  // 이곳에 코드를 작성하세요.
+app.listen(3000, () => {
+  console.log('서버 실행 http://localhost:3000');
 });
-
-app.listen(3000, () => console.log("서버 실행!"));

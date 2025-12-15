@@ -1,65 +1,43 @@
-const form = document.querySelector("form");
-const idInput = document.querySelector("#user_id");
-const passwordInput = document.querySelector("#user_password");
-const loginButton = document.querySelector("#login_button");
+const loginBtn = document.getElementById('login_button');
+const logoutBtn = document.getElementById('logout_button');
 
-const main = document.querySelector("main");
-const userName = document.querySelector("#user_name");
-const userInfo = document.querySelector("#user_info");
-const logoutButton = document.querySelector("#logout_button");
+const userName = document.getElementById('user_name');
+const userInfo = document.getElementById('user_info');
 
-axios.defaults.withCredentials = true;
-// 전역에서 관리
-let accessToken = "";
+let accessToken = '';
 
-form.addEventListener("submit", (e) => e.preventDefault());
+loginBtn.addEventListener('click', async (e) => {
+  e.preventDefault();
 
-function login() {
-  const userId = idInput.value;
-  const userPassword = passwordInput.value;
+  const id = document.getElementById('user_id').value;
+  const password = document.getElementById('user_password').value;
 
-  return (
-    // 유저 아이디와 비밀번호를 담아 서버에 post 요청
-    axios
-      .post("http://localhost:3000", { userId, userPassword })
-      // 받은 엑세스 토큰을 변수에 저장
-      .then((res) => (accessToken = res.data))
-  );
-}
+  try {
+    // 1️⃣ 로그인 요청
+    const loginRes = await axios.post('http://localhost:3000/login', {
+      id,
+      password,
+    });
 
-function logout() {
-  accessToken = "";
-}
+    accessToken = loginRes.data.accessToken;
 
-function getUserInfo() {
-  return axios.get("http://localhost:3000", {
-    // header에 토큰을 넣어서 전송
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-}
+    // 2️⃣ 토큰 검증 요청
+    const verifyRes = await axios.get('http://localhost:3000/verify', {
+      headers: {
+        accessToken,
+      },
+    });
 
-function renderUserInfo(user) {
-  main.style.display = "block";
-  form.style.display = "none";
-  userName.textContent = user.user_name;
-  userInfo.textContent = user.user_info;
-}
+    // 3️⃣ 유저 정보 출력
+    userName.innerText = verifyRes.data.name;
+    userInfo.innerText = JSON.stringify(verifyRes.data);
+  } catch (err) {
+    alert('로그인 실패');
+  }
+});
 
-function renderLoginForm() {
-  main.style.display = "none";
-  form.style.display = "grid"; // UI 변경
-  userName.textContent = "";
-  userInfo.textContent = "";
-}
-
-loginButton.onclick = () => {
-  login() // post 요청
-    // 응답으로 받은 엑세스 토큰 (엑세스 토큰은 자동으로 헤더에 담겨서 요청이 전송됨..)
-    .then(() => getUserInfo()) // get 요청
-    .then((res) => renderUserInfo(res.data));
-};
-
-logoutButton.onclick = () => {
-  logout();
-  renderLoginForm();
-};
+logoutBtn.addEventListener('click', () => {
+  accessToken = '';
+  userName.innerText = '';
+  userInfo.innerText = '';
+});
